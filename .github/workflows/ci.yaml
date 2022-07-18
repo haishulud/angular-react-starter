@@ -9,13 +9,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: angular 
+    #defaults:
+      #run:
+        #working-directory: angular 
 
     strategy:
       matrix:
-        node-version: [16.x, 14.x]
+        node-version: [16.x]
 
     steps:
       - uses: actions/checkout@v2
