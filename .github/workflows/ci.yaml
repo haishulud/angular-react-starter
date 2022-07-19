@@ -2,10 +2,10 @@ name: myCI
 
 on:
   workflow_dispatch:
-  push:
-    branches: master
-  pull_request:
-    branches: master
+  #push:
+    #branches: master
+  #pull_request:
+    #branches: master
 
 jobs:
   build:
@@ -28,5 +28,7 @@ jobs:
         #run: npm install
       - run: npm ci  
       - run: npm run build
-      - run: npm run test -- --watch=false --browsers=ChromeHeadless
+      #- run: npm run test -- --watch=false --browsers=ChromeHeadless
+      - run: npm run test -- --configuration=ci
+      - run: npm run e2e -- --configuration=ci
       - run: npm run lint
