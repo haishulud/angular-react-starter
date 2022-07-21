@@ -76,7 +76,7 @@ jobs:
         run: |
           curl \
             -H "Accept: application/vnd.github+json" \ 
-            -H "Authorization: ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: token <${{ secrets.GITHUB_TOKEN }}>" \
             https://api.github.com/repos/${{ github.actor }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/timing
 
       #---Email notifications---
