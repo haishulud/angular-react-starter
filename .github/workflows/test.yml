@@ -18,4 +18,4 @@ jobs:
           curl \
             -H "Accept: application/vnd.github+json" \ 
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.actor }}/${{ github.repository }}/actions/runs/2709362699/timing
+            https://api.github.com/repos/${{ github.repository }}/actions/runs/2709362699/timing
