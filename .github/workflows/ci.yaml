@@ -1,1 +1,103 @@
+name: myCI
 
+on:
+  workflow_dispatch: #manual start from Github UI
+  #push:
+    #branches: master
+  #pull_request:
+    #branches: master
+
+jobs:
+  main_job:
+    runs-on: ubuntu-latest
+    permissions:      #permissions for publishing Docker images to Github Packages
+      contents: read
+      packages: write
+
+    defaults:
+      run:
+        working-directory: angular 
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+       #node-version: [16.x, 14.x] #used this line instead of the one above to emulate errors in the test phase AND to test matrix syntax
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Install dependencies
+        #run: npm install
+        run: npm ci  		#"ci" is faster than "install" (theoretically?)
+      
+      - name: Buld phase
+        run: npm run build
+      
+      - name: Test phase
+        id: test_phase
+        run: npm run test -- --watch=false --browsers=ChromeHeadless
+      
+      - name: Check if tests were successful and exit on failure
+        if: ${{ failure() && steps.demo.conclusion == 'failure' }}
+        run: exit 1
+
+      - name: Linting
+        run: npm run lint #not in the task, but still running it... just because I can
+      
+      #---Build Docker image, Login & Publish to Docker Packages---
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: ghcr.io/${{ github.repository }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      #---Email notifications---
+      - name: Send email notifications for this job
+        if: ${{ always() }} #run this step even if any previous step failed
+        uses: dawidd6/action-send-mail@6d23605227c578d570e5594931720f85a1af55a2
+        with:
+          # SMTP server address
+          server_address: ${{secrets.MAIL_SERVER}} #NL101.vfemail.net
+          # SMTP server port
+          server_port: 465 #587
+          # Authenticate as this user to SMTP server
+          username: ${{secrets.MAIL_USERNAME}}
+          # Authenticate with this password to SMTP server
+          password: ${{secrets.MAIL_PASSWORD}}
+          # Subject of mail message
+          subject: Github Actions job result
+          # Recipients mail addresses (separated with comma)
+          to: ave.alexey@gmail.com
+          # Full name of mail sender (might be with an email address specified in <>)
+          from: Github CI
+          # Whether this connection use TLS (default is true if server_port is 465)
+          secure: true
+          # Body of mail message (might be a filename prefixed with file:// to read from)
+          body: Build job of ${{github.repository}} completed. Result status ${{job.status}}. Result conclusion ${{job.conclusion}}
+          # Allow unsigned/invalid certificates
+          ignore_cert: true
+          # Convert body from Markdown to HTML (set content_type input as text/html too)
+          #convert_markdown: # optional
+          # Files that will be added to mail message attachments (separated with comma)
+          #attachments: # optional
+          # Set Priority level for the mail message to 'high', 'normal' (default) or 'low'
+          #priority: # optional
