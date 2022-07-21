@@ -10,9 +10,10 @@ on:
 jobs:
   main_job:
     runs-on: ubuntu-latest
-    permissions:      #permissions for publishing Docker images to Github Packages
-      contents: read
-      packages: write
+    permissions:      
+      contents: read  #permissions for publishing Docker images to Github Packages
+      packages: write #permissions for publishing Docker images to Github Packages
+      actions: read   #permissions for GitHub Apps to extract workflow execution time via REST API
 
     defaults:
       run:
@@ -42,7 +43,7 @@ jobs:
         run: npm run test -- --watch=false --browsers=ChromeHeadless
       
       - name: Check if tests were successful and exit on failure
-        if: ${{ failure() && steps.demo.conclusion == 'failure' }}
+        if: ${{ failure() && steps.test_phase.conclusion == 'failure' }}
         run: exit 1
 
       - name: Linting
@@ -69,6 +70,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      
+      - name: Job's running time
+        id: execution_time
+        run: |
+          curl \
+            -H "Accept: application/vnd.github+json" \ 
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.actor }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/timing
 
       #---Email notifications---
       - name: Send email notifications for this job
@@ -101,3 +110,4 @@ jobs:
           #attachments: # optional
           # Set Priority level for the mail message to 'high', 'normal' (default) or 'low'
           #priority: # optional
+      
