@@ -65,7 +65,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
-          context: .
+          context: ./angular
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -92,7 +92,7 @@ jobs:
           # Whether this connection use TLS (default is true if server_port is 465)
           secure: true
           # Body of mail message (might be a filename prefixed with file:// to read from)
-          body: Build job of ${{github.repository}} completed. Result status ${{job.status}}. Result conclusion ${{job.conclusion}}
+          body: Build job of ${{github.repository}} completed. Result status ${{job.status}}. #Result conclusion ${{job.conclusion}}
           # Allow unsigned/invalid certificates
           ignore_cert: true
           # Convert body from Markdown to HTML (set content_type input as text/html too)
