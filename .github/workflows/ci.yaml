@@ -76,7 +76,7 @@ jobs:
         uses: dawidd6/action-send-mail@6d23605227c578d570e5594931720f85a1af55a2
         with:
           # SMTP server address
-          server_address: ${{secrets.MAIL_SERVER}} #NL101.vfemail.net
+          server_address: ${{secrets.MAIL_SERVER}}
           # SMTP server port
           server_port: 465 #587
           # Authenticate as this user to SMTP server
