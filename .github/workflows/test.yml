@@ -9,7 +9,7 @@ jobs:
     permissions:      
       contents: read  #permissions for publishing Docker images to Github Packages
       packages: write #permissions for publishing Docker images to Github Packages
-      actions: read   #permissions for GitHub Apps to extract workflow execution time via REST API
+      #actions: read   #permissions for GitHub Apps to extract workflow execution time via REST API
 
     steps:
       - name: Job's running time
