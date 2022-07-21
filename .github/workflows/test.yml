@@ -14,7 +14,8 @@ jobs:
     steps:
       - name: Job's running time
         id: execution_time
-        run: curl https://api.github.com/repos/haishulud/angular-react-starter/actions/runs/2709362699/timing
+        #run: curl https://api.github.com/repos/haishulud/angular-react-starter/actions/runs/2709362699/timing
+        run: curl https://api.github.com/repos/${{ github.repository }}/actions/runs/2709362699/timing
         #run: |
           #curl \
             #-H "Accept: application/vnd.github+json" \ 
