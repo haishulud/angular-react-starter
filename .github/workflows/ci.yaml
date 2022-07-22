@@ -47,7 +47,7 @@ jobs:
 
       - name: Get this run's id
         id: get_run_id
-        run: echo "::set-output name=jobsrunid::${{ github.run_id }}""
+        run: echo "::set-output name=jobsrunid::${{ github.run_id }}"
       
       - run: echo ${{ github.run_id }}
       
