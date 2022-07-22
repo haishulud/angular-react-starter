@@ -132,6 +132,6 @@ jobs:
         #  echo "::set-output name=runningtime::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ needs.main_job.outputs.output1 }}/timing | jq '.run_duration_ms')"
       - name: print variable
         run: |
-          echo ${{steps.execution_time.outputs.runningtime}}
+          echo ${{steps.execution_time.outputs.starttime}} && echo ${{steps.execution_time.outputs.endtime}}
 
         #for email status needs.<job_id>.result
