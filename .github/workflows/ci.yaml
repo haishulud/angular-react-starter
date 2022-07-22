@@ -13,7 +13,10 @@ jobs:
     permissions:      
       contents: read  #permissions for publishing Docker images to Github Packages
       packages: write #permissions for publishing Docker images to Github Packages
-      actions: read   #permissions for GitHub Apps to extract workflow execution time via REST API
+      #actions: read   #permissions for GitHub Apps to extract workflow execution time via REST API (strangelly everything  works without this line)
+    
+    outputs:
+      output1: ${{steps.get_run_id.outputs.jobsrunid}} #map a step output to a job output
 
     defaults:
       run:
@@ -24,6 +27,13 @@ jobs:
         node-version: [16.x]
        #node-version: [16.x, 14.x] #used this line instead of the one above to emulate errors in the test phase AND to test matrix syntax
     steps:
+      - name: Get this run's id
+        id: get_run_id
+        run: echo "::set-output name=jobsrunid::${{ github.run_id }}""
+      
+      - run: echo ${{ github.run_id }}
+        
+
       - uses: actions/checkout@v3
       
       - name: Use Node.js ${{ matrix.node-version }}
@@ -71,15 +81,15 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
       
-      - name: Job's running time
-        id: execution_time
-        run: |
-          curl \
-            -H "Accept: application/vnd.github+json" \ 
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.actor }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/timing
+      #- name: Job's running time
+      #  id: execution_time
+      #  run: |
+      #    curl \
+      #      -H "Accept: application/vnd.github+json" \ 
+      #      -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+      #      https://api.github.com/repos/${{ github.actor }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/timing
 
-      #---Email notifications---
+      #---Email notifications v1---
       - name: Send email notifications for this job
         if: ${{ always() }} #run this step even if any previous step failed
         uses: dawidd6/action-send-mail@6d23605227c578d570e5594931720f85a1af55a2
@@ -111,3 +121,14 @@ jobs:
           # Set Priority level for the mail message to 'high', 'normal' (default) or 'low'
           #priority: # optional
       
+  stats_job:
+    runs-on: ubuntu-latest
+    needs: main_job
+    steps:
+      - name: Email job running time
+        id: execution_time
+        run: |
+          echo "::set-output name=runningtime::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ needs.main_job.outputs.output1 }}/timing | jq '.run_duration_ms')"
+      
+      - name: print variable
+        run: echo ${{steps.execution_time.outputs.runningtime}}
