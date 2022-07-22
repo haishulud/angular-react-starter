@@ -32,4 +32,5 @@ jobs:
       
       - name: print variable
         run: echo ${{steps.execution_time.outputs.runningtime}}
-      - run: echo ${{jobs.job_id}}
+      - run: |
+          echo ${{jobs.job_id}}
