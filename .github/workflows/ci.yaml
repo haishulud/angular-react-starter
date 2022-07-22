@@ -131,3 +131,5 @@ jobs:
       
       - name: print variable
         run: echo ${{steps.execution_time.outputs.runningtime}}
+
+        #for email status needs.<job_id>.result
