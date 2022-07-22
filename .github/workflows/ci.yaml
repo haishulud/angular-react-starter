@@ -31,7 +31,7 @@ jobs:
         id: get_run_id
         run: echo "::set-output name=jobsrunid::${{ github.run_id }}""
       
-      - run: echo ${{ github.run_id }}
+      #- run: echo ${{ github.run_id }}
         
 
       - uses: actions/checkout@v3
