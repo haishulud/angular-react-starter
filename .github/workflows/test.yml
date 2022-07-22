@@ -35,11 +35,11 @@ jobs:
       - name: calculate time
         run: |
           started_at='2020-01-20T17:42:40Z'
-          completed_at='2020-01-20T17:44:39Z'
+          completed_at='2020-01-20T17:42:50Z'
 
           START_TIME=$(date -d "$started_at" +%s)
           END_TIME=$(date -d "$completed_at" +%s)
 
           ELAPSE=$(( $END_TIME - $START_TIME ))
           echo $ELAPSE
-          echo "$(($ELAPSE/60))m $(($ELAPSE%60))s"
+          echo "$(($ELAPSE/60/60))h $(($ELAPSE/60))m $(($ELAPSE%60))s"
