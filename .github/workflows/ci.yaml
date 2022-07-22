@@ -27,13 +27,6 @@ jobs:
         node-version: [16.x]
        #node-version: [16.x, 14.x] #used this line instead of the one above to emulate errors in the test phase AND to test matrix syntax
     steps:
-      - name: Get this run's id
-        id: get_run_id
-        run: echo "::set-output name=jobsrunid::${{ github.run_id }}""
-      
-      #- run: echo ${{ github.run_id }}
-        
-
       - uses: actions/checkout@v3
       
       - name: Use Node.js ${{ matrix.node-version }}
@@ -51,6 +44,12 @@ jobs:
       - name: Test phase
         id: test_phase
         run: npm run test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Get this run's id
+        id: get_run_id
+        run: echo "::set-output name=jobsrunid::${{ github.run_id }}""
+      
+      - run: echo ${{ github.run_id }}
       
       - name: Check if tests were successful and exit on failure
         if: ${{ failure() && steps.test_phase.conclusion == 'failure' }}
