@@ -136,8 +136,8 @@ jobs:
       - name: calculate time
         id: calculate_time
         run: |
-          started_at='${{steps.execution_time.outputs.starttime}}'
-          completed_at='${{steps.execution_time.outputs.endtime}}'
+          started_at=${{steps.execution_time.outputs.starttime}}
+          completed_at=${{steps.execution_time.outputs.endtime}}
 
           START_TIME=$(date -d "$started_at" +%s)
           END_TIME=$(date -d "$completed_at" +%s)
