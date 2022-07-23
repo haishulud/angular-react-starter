@@ -42,4 +42,4 @@ jobs:
 
           ELAPSE=$(( $END_TIME - $START_TIME ))
           echo $ELAPSE
-          echo "$(($ELAPSE/60/60))h $(($ELAPSE/60))m $(($ELAPSE%60))s"
+          echo "$(($ELAPSE/60/60))h $(($ELAPSE/60))m $(($ELAPSE%60))s $(($ELAPSE))s"
