@@ -144,6 +144,8 @@ jobs:
 
           ELAPSE=$(( $END_TIME - $START_TIME ))
           echo $ELAPSE
+          echo $ELAPSE+%T
+          echo $ELAPSE +%T
           echo "$(($ELAPSE/60/60))h $(($ELAPSE/60))m $(($ELAPSE%60))s"
           echo "::set-output name=elpsd::$ELAPSE"
 
