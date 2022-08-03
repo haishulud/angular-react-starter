@@ -110,6 +110,11 @@ jobs:
         id: job_conclusion
         run: |
           echo "::set-output name=main_job_conclusion::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].conclusion')"
+      
+      - name: Get user's email
+        id: fetch_email
+        run: |
+          echo "::set-output name=usermail::$(git log -n 1 --pretty=format:%ae remotes/origin/${{ github.head_ref }})"
 
       #---Email notifications v2 with elapsed time---
       - name: Send email notifications for this job v2
@@ -127,7 +132,7 @@ jobs:
           # Subject of mail message
           subject: Github Actions job result
           # Recipients mail addresses (separated with comma)
-          to: ${{github.event.pusher.email}}
+          to: ${{steps.fetch_email.outputs.usermail}} #${{github.event.pusher.email}}
           # Full name of mail sender (might be with an email address specified in <>)
           from: Github CI v2
           # Whether this connection use TLS (default is true if server_port is 465)
