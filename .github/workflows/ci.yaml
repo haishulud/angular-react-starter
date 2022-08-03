@@ -114,7 +114,7 @@ jobs:
       - name: Get user's email
         id: fetch_email
         run: |
-          echo "::set-output name=usermail::$(git log -n 1 --pretty=format:%ae remotes/origin/${{ github.head_ref }})"
+          echo "::set-output name=usermail::$(git log -n 1 --pretty=format:%ae)"
 
       #---Email notifications v2 with elapsed time---
       - name: Send email notifications for this job v2
