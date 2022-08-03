@@ -4,8 +4,8 @@ on:
   #workflow_dispatch: #manual start from Github UI or API
   push:
     branches: master
-  pull_request:
-    branches: master
+  #pull_request:
+    #branches: master
 
 jobs:
   main_job:
@@ -70,7 +70,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
       
-      #- name: Job's running time !!!!!this approach DOESN'T WORK!!!! because .run_duration_ms parameter awailable only after this workflow completion and accessible only from other actions, which isn't possible according to this test task conditions (I can't create additional yaml files)
+      #- name: Job's running time !!!!!this approach DOESN'T WORK!!!! because .run_duration_ms parameter is awailable only after this workflow completion and accessible only from other actions, which isn't possible according to this test task conditions (I can't create additional yaml files)
       #  id: execution_time
       #  run: |
       #    curl \
@@ -99,6 +99,7 @@ jobs:
 
           ELAPSE=$(( $END_TIME - $START_TIME ))
           echo $ELAPSE
+          echo ${{github.event.pusher.email}}
           echo "$(($ELAPSE/60/60))h $(($ELAPSE/60%60))m $(($ELAPSE%60))s"
           echo "::set-output name=elpsd::$ELAPSE"
           echo "::set-output name=el_hours::$(($ELAPSE/60/60))"
