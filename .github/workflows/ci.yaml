@@ -111,9 +111,15 @@ jobs:
         run: |
           echo "::set-output name=main_job_conclusion::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].conclusion')"
       
+      - name: Checks out repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - name: Get user's email
         id: fetch_email
         run: |
+          git checkout remotes/origin/${{github.head_ref}}
           echo "::set-output name=usermail::$(git log -n 1 --pretty=format:%ae)"
 
       #---Email notifications v2 with elapsed time---
