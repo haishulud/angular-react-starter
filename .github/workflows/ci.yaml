@@ -100,6 +100,8 @@ jobs:
           ELAPSE=$(( $END_TIME - $START_TIME ))
           echo $ELAPSE
           echo ${{github.event.pusher.email}}
+          echo $(git log -n 1 --pretty=format:%ae)
+          echo git log -n 1 --pretty=format:%ae
           echo "$(($ELAPSE/60/60))h $(($ELAPSE/60%60))m $(($ELAPSE%60))s"
           echo "::set-output name=elpsd::$ELAPSE"
           echo "::set-output name=el_hours::$(($ELAPSE/60/60))"
