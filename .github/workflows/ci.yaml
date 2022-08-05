@@ -37,6 +37,10 @@ jobs:
       - name: Buld phase
         run: npm run build
       
+      - name: print working dir
+        run: |
+          echo $PWD
+
       - name: Test phase
         id: test_phase
         run: npm run test -- --watch=false --browsers=ChromeHeadless
