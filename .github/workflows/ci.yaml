@@ -99,7 +99,6 @@ jobs:
 
           ELAPSE=$(( $END_TIME - $START_TIME ))
           echo $ELAPSE
-          echo ${{github.event.pusher.email}}
           echo "$(($ELAPSE/60/60))h $(($ELAPSE/60%60))m $(($ELAPSE%60))s"
           echo "::set-output name=elpsd::$ELAPSE"
           echo "::set-output name=el_hours::$(($ELAPSE/60/60))"
@@ -110,17 +109,6 @@ jobs:
         id: job_conclusion
         run: |
           echo "::set-output name=main_job_conclusion::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].conclusion')"
-      
-      - name: Checks out repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Get user's email
-        id: fetch_email
-        run: |
-          git checkout remotes/origin/${{github.head_ref}}
-          echo "::set-output name=usermail::$(git log -n 1 --pretty=format:%ae)"
 
       #---Email notifications v2 with elapsed time---
       - name: Send email notifications for this job v2
@@ -138,7 +126,7 @@ jobs:
           # Subject of mail message
           subject: Github Actions job result
           # Recipients mail addresses (separated with comma)
-          to: ${{github.event.pusher.email}} #${{steps.fetch_email.outputs.usermail}}
+          to: ${{github.event.pusher.email}}
           # Full name of mail sender (might be with an email address specified in <>)
           from: Github CI v2
           # Whether this connection use TLS (default is true if server_port is 465)

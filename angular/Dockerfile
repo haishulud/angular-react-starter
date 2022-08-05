@@ -1,11 +1,12 @@
-FROM node:latest as node
-WORKDIR /app
-COPY . .
-RUN npm install
-RUN npm run build
+#FROM node:18.7.0-alpine3.15 as node
+#WORKDIR /app
+#COPY . .
+#RUN npm install
+#RUN npm run build
 
-FROM nginx:alpine
-COPY --from=node /app/dist/angular-starter /usr/share/nginx/html
+FROM nginx:1.23.1-alpine
+#COPY --from=node /app/dist/angular-starter /usr/share/nginx/html
+COPY /app/dist/angular-starter /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 WORKDIR /app
 
@@ -21,5 +22,3 @@ USER nginx
 #---
 
 EXPOSE 8080
-
-CMD ["nginx", "-g", "daemon off;"]
