@@ -40,8 +40,8 @@ jobs:
       - name: print working dir
         run: |
           echo $PWD
-          ls $PWD
-          ls ${{ github.workspace }}
+      - run: "ls $PWD"
+      - run: "ls ${{ github.workspace }}"
       - run: "echo $HOME"
 
       - name: Test phase
