@@ -11,16 +11,17 @@ RUN echo $ls
 RUN echo $pwd
 RUN ls
 RUN ls /home
-RUN ls /home/runner
-RUN ls /home/runner/work
-RUN ls /home/runner/work/angular-react-starter
-RUN ls /home/runner/work/angular-react-starter/angular-react-starter
-RUN ls /home/runner/work/angular-react-starter/angular-react-starter/angular
-RUN ls /home/runner/work/angular-react-starter/angular-react-starter/angular/dist
-RUN ls /home/runner/work/angular-react-starter/angular-react-starter/angular/dist/angular-starter
-ENTRYPOINT ["ls"]
-COPY /home/runner/work/angular-react-starter/angular-react-starter/angular/dist/angular-starter /usr/share/nginx/html
+#RUN ls /home/runner
+#RUN ls /home/runner/work
+#RUN ls /home/runner/work/angular-react-starter
+#RUN ls /home/runner/work/angular-react-starter/angular-react-starter
+#RUN ls /home/runner/work/angular-react-starter/angular-react-starter/angular
+#RUN ls /home/runner/work/angular-react-starter/angular-react-starter/angular/dist
+#RUN ls /home/runner/work/angular-react-starter/angular-react-starter/angular/dist/angular-starter
+#ENTRYPOINT ["ls"]
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY dist/angular-starter /usr/share/nginx/html
+
 WORKDIR /app
 
 #---switch to non root user---
