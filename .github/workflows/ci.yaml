@@ -40,7 +40,6 @@ jobs:
       - name: print working dir
         run: |
           echo $PWD
-          echo $ls
 
       - name: Test phase
         id: test_phase

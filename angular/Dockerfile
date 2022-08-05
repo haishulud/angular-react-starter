@@ -6,7 +6,7 @@
 
 FROM nginx:1.23.1-alpine
 #COPY --from=node /app/dist/angular-starter /usr/share/nginx/html
-COPY /app/dist/angular-starter /usr/share/nginx/html
+COPY /home/runner/work/angular-react-starter/angular-react-starter/angular/dist/angular-starter /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 WORKDIR /app
 
