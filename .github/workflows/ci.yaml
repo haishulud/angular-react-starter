@@ -70,16 +70,16 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
       
-      - name: build docker image
-        run: docker build --progress=plain --no-cache -t ghcr.io/haishulud/angular-react-starter:3 .
+      #- name: build docker image
+      #  run: docker build --progress=plain --no-cache -t ghcr.io/haishulud/angular-react-starter:3 .
 
-      #- name: Build and push Docker image
-      #  uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-      #  with:
-      #    context: ./angular
-      #    push: true
-      #    tags: ${{ steps.meta.outputs.tags }}
-      #    labels: ${{ steps.meta.outputs.labels }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: ./angular
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
       
       #- name: Job's running time !!!!!this approach DOESN'T WORK!!!! because .run_duration_ms parameter is awailable only after this workflow completion and accessible only from other actions, which isn't possible according to this test task conditions (I can't create additional yaml files)
       #  id: execution_time
