@@ -41,6 +41,7 @@ jobs:
         run: |
           echo $PWD
       - run: "ls $PWD"
+      - run: "ls /home/runner/work/angular-react-starter/angular-react-starter/angular/dist"
       - run: "ls ${{ github.workspace }}"
       - run: "echo $HOME"
 
