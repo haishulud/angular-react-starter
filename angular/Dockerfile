@@ -9,6 +9,8 @@ FROM nginx:1.23.1-alpine
 RUN echo $(ls)
 RUN echo $ls
 RUN echo $pwd
+RUN ls
+ENTRYPOINT ["ls"]
 COPY /home/runner/work/angular-react-starter/angular-react-starter/angular/dist/angular-starter /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 WORKDIR /app
