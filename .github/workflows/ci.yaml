@@ -99,7 +99,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           PR_SHA7=${{github.event.pull_request.head.sha}}
-          docker build -t $REGISTRY/$IMAGE_NAME:${PR_SHA7::7}} -t $REGISTRY/$IMAGE_NAME:latest .
+          docker build -t $REGISTRY/$IMAGE_NAME:${PR_SHA7::7} -t $REGISTRY/$IMAGE_NAME:latest .
 
       - name: push Docker image on push event
         if: github.event_name == 'push'
