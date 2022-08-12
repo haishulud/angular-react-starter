@@ -109,7 +109,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           PR_SHA7=${{github.event.pull_request.head.sha}}
-          docker push $REGISTRY/$IMAGE_NAME:${PR_SHA7::7}} && docker push $REGISTRY/$IMAGE_NAME:latest
+          docker push $REGISTRY/$IMAGE_NAME:${PR_SHA7::7} && docker push $REGISTRY/$IMAGE_NAME:latest
 
       #---Build Docker image, Login & Publish to Docker Packages - WITH 3RD PARTY ACTIONS---
       #- name: Log in to the Container registry
