@@ -7,21 +7,21 @@ on:
   pull_request:
     branches: [master, dev]
 
-env:
-  NODE_VER: 16.x
-  UBUNTU_VER: ubuntu-20.04
+#env:
+#  NODE_VER: 16.x
+#  UBUNTU_VER: ubuntu-20.04
 
 jobs:
   test_job:
     timeout-minutes: 30
-    runs-on: $UBUNTU_VER
+    runs-on: ubuntu-20.04
     defaults:
       run:
         working-directory: angular
 
     strategy:
       matrix:
-        node-version: [$NODE_VER]
+        node-version: [16.x]
        #node-version: [16.x, 14.x] #used this line instead of the one above to emulate errors in the test phase AND to test matrix syntax
     
     steps:
@@ -58,7 +58,7 @@ jobs:
 
   build_job:
     timeout-minutes: 30
-    runs-on: $UBUNTU_VER
+    runs-on: ubuntu-20.04
     needs: test_job
 
     env:
@@ -79,7 +79,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: $NODE_VER
+          node-version: 16.x
       
       - name: Install dependencies
         run: npm ci
@@ -131,7 +131,7 @@ jobs:
   
   stats_job:
     timeout-minutes: 30
-    runs-on: $UBUNTU_VER
+    runs-on: ubuntu-20.04
     if: ${{ always() }}
     needs: [build_job, test_job]
     steps:
