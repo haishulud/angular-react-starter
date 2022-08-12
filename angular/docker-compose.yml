@@ -1,7 +1,7 @@
 services:
 
   angularapp:
-    image: ghcr.io/haishulud/angular-react-starter:master
+    image: ghcr.io/haishulud/angular-react-starter:latest
     restart: always
     ports:
       - 8080:80
