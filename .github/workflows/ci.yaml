@@ -59,7 +59,7 @@ jobs:
   build_job:
     timeout-minutes: 30
     runs-on: $UBUNTU_VER
-    needs: build_job
+    needs: build_job #
 
     env:
       REGISTRY: ghcr.io
