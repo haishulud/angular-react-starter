@@ -3,9 +3,9 @@ name: myCI
 on:
   #workflow_dispatch: #manual start from Github UI or API
   push:
-    branches: master
+    branches: [master, dev]
   pull_request:
-    branches: master
+    branches: [master, dev]
 
 env:
   NODE_VER: 16.x
