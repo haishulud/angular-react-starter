@@ -97,11 +97,11 @@ jobs:
 
       - name: push Docker image on push event
         if: github.event_name == 'push'
-        run: docker push $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7}
+        run: docker push $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7} && docker push $REGISTRY/$IMAGE_NAME:latest
 
       - name: push Docker image on PR event
         if: github.event_name == 'pull_request'
-        run: docker push $REGISTRY/$IMAGE_NAME:${github.event.pull_request.head.sha::7}
+        run: docker push $REGISTRY/$IMAGE_NAME:${github.event.pull_request.head.sha::7} && docker push $REGISTRY/$IMAGE_NAME:latest
 
       #---Build Docker image, Login & Publish to Docker Packages - WITH 3RD PARTY ACTIONS---
       #- name: Log in to the Container registry
