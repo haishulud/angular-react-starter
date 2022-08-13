@@ -163,7 +163,11 @@ jobs:
           echo "::set-output name=el_hours::$(($ELAPSE/60/60))"
           echo "::set-output name=el_minutes::$(($ELAPSE/60%60))"
           echo "::set-output name=el_seconds::$(($ELAPSE%60))"
-
+      
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0      
+          
       - name: get email
         id: email
         run: |
