@@ -2,8 +2,8 @@ name: myCI
 
 on:
   #workflow_dispatch: #manual start from Github UI or API
-  push:
-    branches: [master, dev]
+  #push:
+    #branches: [master, dev]
   pull_request:
     branches: [master, dev]
 
@@ -87,10 +87,6 @@ jobs:
       - name: Log in to the Container registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
 
-      - name: get PR sha1
-        if: github.event_name == 'pull_request'
-        run: PR_SHA7=${{github.event.pull_request.head.sha}}
-      
       - name: build Docker image on push event
         if: github.event_name == 'push'
         run: docker build -t $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7} -t $REGISTRY/$IMAGE_NAME:latest .
@@ -168,6 +164,16 @@ jobs:
           echo "::set-output name=el_minutes::$(($ELAPSE/60%60))"
           echo "::set-output name=el_seconds::$(($ELAPSE%60))"
 
+      - name: get email
+        id: email
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            git checkout remotes/origin/${{ github.head_ref }}
+            echo "::set-output name=email_address::$(git log -n 1 --pretty=format:%ae)"
+          else
+            echo "::set-output name=email_address::$(${{ github.event.pusher.email }})"
+          fi
+
       - name: Get job conclusion (success or failure)
         id: job_conclusion
         run: |
@@ -190,7 +196,7 @@ jobs:
           # Subject of mail message
           subject: Github Actions job result
           # Recipients mail addresses (separated with comma)
-          to: ${{ github.event.pusher.email }}
+          to: ${{steps.email.outputs.email_address}} #${{ github.event.pusher.email }}
           # Full name of mail sender (might be with an email address specified in <>)
           from: Github CI v2
           # Whether this connection use TLS (default is true if server_port is 465)
