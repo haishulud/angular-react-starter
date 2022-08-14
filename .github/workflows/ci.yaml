@@ -2,8 +2,8 @@ name: myCI
 
 on:
   #workflow_dispatch: #manual start from Github UI or API
-  #push:
-    #branches: [master, dev]
+  push:
+    branches: [master, dev]
   pull_request:
     branches: [master, dev]
 
