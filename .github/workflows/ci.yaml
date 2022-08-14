@@ -157,6 +157,7 @@ jobs:
           ELAPSE_BUILD=$(( $END_TIME_BUILD - $START_TIME_BUILD ))
           ELAPSE=$(( $ELAPSE_TEST + $ELAPSE_BUILD ))
           echo $ELAPSE
+          
           echo "$(($ELAPSE/60/60))h $(($ELAPSE/60%60))m $(($ELAPSE%60))s"
           echo "::set-output name=elpsd::$ELAPSE"
           echo "::set-output name=el_hours::$(($ELAPSE/60/60))"
