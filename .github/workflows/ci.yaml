@@ -167,15 +167,14 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0      
-          
+
       - name: get email
         id: email
         run: |
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            git checkout remotes/origin/${{ github.head_ref }}
-            echo "::set-output name=email_address::$(git log -n 1 --pretty=format:%ae)"
+            echo "::set-output name=user_email::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/haishulud/angular-react-starter/actions/runs | jq '.workflow_runs[0].head_commit.committer.email')"
           else
-            echo "::set-output name=email_address::$(${{ github.event.pusher.email }})"
+            echo "::set-output name=user_email::${{ github.event.pusher.email }}"
           fi
 
       - name: Get job conclusion (success or failure)
@@ -200,7 +199,7 @@ jobs:
           # Subject of mail message
           subject: Github Actions job result
           # Recipients mail addresses (separated with comma)
-          to: ${{steps.email.outputs.email_address}} #${{ github.event.pusher.email }}
+          to: ${{ steps.email.outputs.user_email }} #${{ github.event.pusher.email }}
           # Full name of mail sender (might be with an email address specified in <>)
           from: Github CI v2
           # Whether this connection use TLS (default is true if server_port is 465)
