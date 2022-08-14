@@ -2,24 +2,26 @@ name: myCI
 
 on:
   #workflow_dispatch: #manual start from Github UI or API
-  #push:
-    #branches: [master, dev]
-  pull_request:
-    branches: [master, dev]
+  push:
+    branches: master
+  #pull_request:
+    #branches: master
 
 jobs:
-  test_job:
-    timeout-minutes: 30
-    runs-on: ubuntu-20.04
+  main_job:
+    runs-on: ubuntu-latest
+    permissions:      
+      contents: read  #permissions for publishing Docker images to Github Packages
+      packages: write #permissions for publishing Docker images to Github Packages
+          
     defaults:
       run:
-        working-directory: angular
+        working-directory: angular 
 
     strategy:
       matrix:
         node-version: [16.x]
        #node-version: [16.x, 14.x] #used this line instead of the one above to emulate errors in the test phase AND to test matrix syntax
-    
     steps:
       - uses: actions/checkout@v3
       
@@ -31,10 +33,18 @@ jobs:
       - name: Install dependencies
         #run: npm install
         run: npm ci  		#"ci" is (theoretically?) faster than "install"
+      
+      - name: Buld phase
+        run: npm run build
+      
+      - name: print working dir
+        run: |
+          echo $PWD
+      - run: "ls $PWD"
+      - run: "ls /home/runner/work/angular-react-starter/angular-react-starter/angular/dist/angular-starter"
+      - run: "ls ${{ github.workspace }}"
+      - run: "echo $HOME"
 
-      - name: Linting
-        run: npm run lint
-     
       - name: Test phase
         id: test_phase
         run: npm run test -- --watch=false --browsers=ChromeHeadless
@@ -43,6 +53,31 @@ jobs:
         if: ${{ failure() && steps.test_phase.conclusion == 'failure' }}
         run: exit 1
 
+      - name: Linting
+        run: npm run lint #not in the task, but still running it... just because I can
+      
+      #---Build Docker image, Login & Publish to Docker Packages---
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: ghcr.io/${{ github.repository }}
+            
+      - name: Build and push Docker image
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: ./angular
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      
       #- name: Job's running time !!!!!this approach DOESN'T WORK!!!! because .run_duration_ms parameter is awailable only after this workflow completion and accessible only from other actions, which isn't possible according to this test task conditions (I can't create additional yaml files)
       #  id: execution_time
       #  run: |
@@ -51,133 +86,37 @@ jobs:
       #      -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
       #      https://api.github.com/repos/${{ github.actor }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/timing
 
-
-  build_job:
-    timeout-minutes: 30
-    runs-on: ubuntu-20.04
-    needs: test_job
-
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
-
-    permissions:      
-      contents: read  #permissions for publishing Docker images to Github Packages
-      packages: write #permissions for publishing Docker images to Github Packages
-    
-    defaults:
-      run:
-        working-directory: angular
-    
-    steps:
-      - uses: actions/checkout@v3
       
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
-      
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Buld phase
-        run: npm run build
-
-      #---Build Docker image, Login & Publish to Docker Packages---
-      - name: Log in to the Container registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
-
-      - name: build Docker image on push event
-        if: github.event_name == 'push'
-        run: docker build -t $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7} -t $REGISTRY/$IMAGE_NAME:latest .
-
-      - name: build Docker image on PR event
-        if: github.event_name == 'pull_request'
-        run: |
-          PR_SHA7=${{github.event.pull_request.head.sha}}
-          docker build -t $REGISTRY/$IMAGE_NAME:${PR_SHA7::7} -t $REGISTRY/$IMAGE_NAME:latest .
-
-      - name: push Docker image on push event
-        if: github.event_name == 'push'
-        run: docker push $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7} && docker push $REGISTRY/$IMAGE_NAME:latest
-
-      - name: push Docker image on PR event
-        if: github.event_name == 'pull_request'
-        run: |
-          PR_SHA7=${{github.event.pull_request.head.sha}}
-          docker push $REGISTRY/$IMAGE_NAME:${PR_SHA7::7} && docker push $REGISTRY/$IMAGE_NAME:latest
-
-      #---Build Docker image, Login & Publish to Docker Packages - WITH 3RD PARTY ACTIONS---
-      #- name: Log in to the Container registry
-      #  uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-      #  with:
-      #    registry: $REGISTRY
-      #    username: ${{ github.actor }} #${{ github.repository_owner }}
-      #    password: ${{ secrets.GITHUB_TOKEN }}
-      
-      #- name: Extract metadata (tags, labels) for Docker
-      #  id: meta
-      #  uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
-      #  with:
-      #    images: $REGISTRY/$IMAGE_NAME
-            
-      #- name: Build and push Docker image
-      #  uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-      #  with:
-      #    context: ./angular
-      #    push: true
-      #    tags: ${{ steps.meta.outputs.tags }}
-      #    labels: ${{ steps.meta.outputs.labels }}
-  
   stats_job:
-    timeout-minutes: 30
-    runs-on: ubuntu-20.04
-    if: ${{ always() }}
-    needs: [build_job, test_job]
+    runs-on: ubuntu-latest
+    needs: main_job
     steps:
-      - name:  Extract TEST and BUILD job starting & ending time
+      - name:  Extract job starting & ending time
         id: execution_timestamps
         run: |
-          echo "::set-output name=starttime_test::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].started_at')" && echo "::set-output name=endtime_test::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].completed_at')"
-          echo "::set-output name=starttime_build::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[1].started_at')" && echo "::set-output name=endtime_build::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[1].completed_at')"
-
+          echo "::set-output name=starttime::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].started_at')" && echo "::set-output name=endtime::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].completed_at')"
+      
       - name: calculate time
         id: calculate_time
         run: |
-          started_at_test=${{steps.execution_timestamps.outputs.starttime_test}}
-          completed_at_test=${{steps.execution_timestamps.outputs.endtime_test}}
-          started_at_build=${{steps.execution_timestamps.outputs.starttime_build}}
-          completed_at_build=${{steps.execution_timestamps.outputs.endtime_build}}
+          started_at=${{steps.execution_timestamps.outputs.starttime}}
+          completed_at=${{steps.execution_timestamps.outputs.endtime}}
 
-          START_TIME_TEST=$(date -d "$started_at_test" +%s)
-          END_TIME_TEST=$(date -d "$completed_at_test" +%s)
-          START_TIME_BUILD=$(date -d "$started_at_build" +%s)
-          END_TIME_BUILD=$(date -d "$completed_at_build" +%s)
+          START_TIME=$(date -d "$started_at" +%s)
+          END_TIME=$(date -d "$completed_at" +%s)
 
-          ELAPSE_TEST=$(( $END_TIME_TEST - $START_TIME_TEST ))
-          ELAPSE_BUILD=$(( $END_TIME_BUILD - $START_TIME_BUILD ))
-          ELAPSE=$(( $ELAPSE_TEST + $ELAPSE_BUILD ))
+          ELAPSE=$(( $END_TIME - $START_TIME ))
           echo $ELAPSE
           echo "$(($ELAPSE/60/60))h $(($ELAPSE/60%60))m $(($ELAPSE%60))s"
           echo "::set-output name=elpsd::$ELAPSE"
           echo "::set-output name=el_hours::$(($ELAPSE/60/60))"
           echo "::set-output name=el_minutes::$(($ELAPSE/60%60))"
           echo "::set-output name=el_seconds::$(($ELAPSE%60))"
-      
-      - name: get email for Committer on PR or pusher on PUSH
-        id: email
-        run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            echo "::set-output name=user_email::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs | jq '.workflow_runs[0].head_commit.committer.email')"
-          else
-            echo "::set-output name=user_email::${{ github.event.pusher.email }}"
-          fi
 
       - name: Get job conclusion (success or failure)
         id: job_conclusion
         run: |
-          echo "::set-output name=test_job_conclusion::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].conclusion')"
-          echo "::set-output name=build_job_conclusion::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[1].conclusion')"
+          echo "::set-output name=main_job_conclusion::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].conclusion')"
 
       #---Email notifications v2 with elapsed time---
       - name: Send email notifications for this job v2
@@ -185,22 +124,22 @@ jobs:
         uses: dawidd6/action-send-mail@6d23605227c578d570e5594931720f85a1af55a2
         with:
           # SMTP server address
-          server_address: ${{ secrets.MAIL_SERVER }}
+          server_address: ${{secrets.MAIL_SERVER}}
           # SMTP server port
           server_port: 465 #587
           # Authenticate as this user to SMTP server
-          username: ${{ secrets.MAIL_USERNAME }}
+          username: ${{secrets.MAIL_USERNAME}}
           # Authenticate with this password to SMTP server
-          password: ${{ secrets.MAIL_PASSWORD }}
+          password: ${{secrets.MAIL_PASSWORD}}
           # Subject of mail message
           subject: Github Actions job result
           # Recipients mail addresses (separated with comma)
-          to: ${{ steps.email.outputs.user_email }} #${{ github.event.pusher.email }}
+          to: ${{github.event.pusher.email}}
           # Full name of mail sender (might be with an email address specified in <>)
           from: Github CI v2
           # Whether this connection use TLS (default is true if server_port is 465)
           secure: true
           # Body of mail message (might be a filename prefixed with file:// to read from)
-          body: Build job for ${{ github.repository }} has completed. Result status for TESTS-${{ steps.job_conclusion.outputs.test_job_conclusion }}, for BUILD JOB-${{ steps.job_conclusion.outputs.build_job_conclusion }} . Time ${{ steps.calculate_time.outputs.el_hours }}h ${{ steps.calculate_time.outputs.el_minutes }}m ${{ steps.calculate_time.outputs.el_seconds }}s (${{ steps.calculate_time.outputs.elpsd }} sec)
+          body: Build job for ${{github.repository}} has completed. Result status ${{steps.job_conclusion.outputs.main_job_conclusion}}. Time ${{steps.calculate_time.outputs.el_hours}}h ${{steps.calculate_time.outputs.el_minutes}}m ${{steps.calculate_time.outputs.el_seconds}}s (${{steps.calculate_time.outputs.elpsd}} sec)
           # Allow unsigned/invalid certificates
           ignore_cert: true
