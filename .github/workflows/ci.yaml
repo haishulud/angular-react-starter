@@ -164,10 +164,6 @@ jobs:
           echo "::set-output name=el_minutes::$(($ELAPSE/60%60))"
           echo "::set-output name=el_seconds::$(($ELAPSE%60))"
       
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0      
-
       - name: get email for Committer on PR or pusher on PUSH
         id: email
         run: |
