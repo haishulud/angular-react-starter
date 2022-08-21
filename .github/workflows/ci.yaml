@@ -15,12 +15,21 @@ jobs:
       run:
         working-directory: angular
 
+    outputs:
+      start_time: ${{ steps.start.outputs.start_time}}
+
     strategy:
       matrix:
         node-version: [16.x]
-       #node-version: [16.x, 14.x] #used this line instead of the one above to emulate errors in the test phase AND to test matrix syntax
-    
+
     steps:
+      - name: start time
+        id: start
+        run: |
+          #printf -v now '%(%s)T\n'
+          #echo "::set-output name=start_time::$(%(%s)T\n)"
+          printf "::set-output name=start_time::$(%(%s)T\n)"
+
       - uses: actions/checkout@v3
       
       - name: use node.js ${{ matrix.node-version }}
@@ -35,11 +44,11 @@ jobs:
         run: npm run lint
      
       - name: run
-        id: test_phase
+        id: run_test
         run: npm run test -- --watch=false --browsers=ChromeHeadless
 
       - name: check #Check if tests were successful and exit on failure
-        if: ${{ failure() && steps.test_phase.conclusion == 'failure' }}
+        if: ${{ failure() && steps.run_test.conclusion == 'failure' }}
         run: exit 1
 
     
@@ -78,11 +87,10 @@ jobs:
       - name: login #log in to the container registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
 
-      - name: build Docker image on push event ###########
-        run: docker build -t $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7} -t $REGISTRY/$IMAGE_NAME:${GITHUB_SHA: -7:0} -t $REGISTRY/$IMAGE_NAME:latest .
+      - name: build image
+        run: docker build -t $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7} -t $REGISTRY/$IMAGE_NAME:latest .
 
-      - name: push Docker image on push event ########
-        if: github.event_name == 'push'
+      - name: push image
         run: docker push $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7} && docker push $REGISTRY/$IMAGE_NAME:latest
 
   
@@ -95,11 +103,20 @@ jobs:
       - name:  Extract TEST and BUILD job starting & ending time #####
         id: execution_timestamps
         run: |
-          echo "::set-output name=starttime_test::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].started_at')" && echo "::set-output name=endtime_test::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].completed_at')"
-          echo "::set-output name=starttime_build::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[1].started_at')" && echo "::set-output name=endtime_build::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[1].completed_at')"
+          echo "::set-output name=starttime_test::$(curl -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
+          | jq '.jobs[0].started_at')"
+          echo "::set-output name=endtime_test::$(curl -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
+          | jq '.jobs[0].completed_at')"
+          echo "::set-output name=starttime_build::$(curl -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
+          | jq '.jobs[1].started_at')"
+          echo "::set-output name=endtime_build::$(curl -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
+          | jq '.jobs[1].completed_at')"
 
-      - name: calculate time
-        id: calculate_time
+      - id: calculate_time
         run: |
           started_at_test=${{steps.execution_timestamps.outputs.starttime_test}}
           completed_at_test=${{steps.execution_timestamps.outputs.endtime_test}}
@@ -121,11 +138,11 @@ jobs:
           echo "::set-output name=el_minutes::$(($ELAPSE/60%60))"
           echo "::set-output name=el_seconds::$(($ELAPSE%60))"
       
-      - name: get email for Committer on PR or pusher on PUSH ########
+      - name: get email for Committer on PR or pusher on PUSH ######## #--pretty=format:%ae HEAD
         id: email
         run: |
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            echo "::set-output name=user_email::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs | jq '.workflow_runs[0].head_commit.committer.email')"
+            echo "::set-output name=user_email::$(git log -1 --pretty=format:%ae)" 
           else
             echo "::set-output name=user_email::${{ github.event.pusher.email }}"
           fi
@@ -136,9 +153,16 @@ jobs:
           echo "::set-output name=test_conclusion::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].conclusion')"
           echo "::set-output name=build_conclusion::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[1].conclusion')"
 
+      - id: calculate_duration
+        run: |
+          #echo "::set-output name=elapsed::$((now - ${{needs.test.outputs.start_time}}))"
+          printf -v now '%(%s)T'
+          ELPSD=$((now - ${{needs.test.outputs.start_time}}))
+          echo "::set-output name=elapsed::$ELPSD"
+
       #---Email notifications with elapsed time---
       - name: Send email notifications for this job
-        if: ${{ always() }} #run this step even if previous steps failed
+        if: ${{ always() }} #run this step even if previous steps have failed
         uses: dawidd6/action-send-mail@6d23605227c578d570e5594931720f85a1af55a2
         with:
           # SMTP server address
@@ -158,6 +182,6 @@ jobs:
           # Whether this connection use TLS (default is true if server_port is 465)
           secure: true
           # Body of mail message (might be a filename prefixed with file:// to read from)
-          body: Build job for ${{ github.repository }} has completed. Result status for TESTS-${{ steps.job_conclusion.outputs.test_conclusion }}, for BUILD JOB-${{ steps.job_conclusion.outputs.build_conclusion }} . Time ${{ steps.calculate_time.outputs.el_hours }}h ${{ steps.calculate_time.outputs.el_minutes }}m ${{ steps.calculate_time.outputs.el_seconds }}s (${{ steps.calculate_time.outputs.elpsd }} sec)
+          body: Build job for ${{ github.repository }} has completed. Result status for TESTS-${{ steps.job_conclusion.outputs.test_conclusion }}, for BUILD JOB-${{ steps.job_conclusion.outputs.build_conclusion }} . Time ${{ steps.calculate_time.outputs.el_hours }}h ${{ steps.calculate_time.outputs.el_minutes }}m ${{ steps.calculate_time.outputs.el_seconds }}s (${{ steps.calculate_time.outputs.elpsd }} sec) (new time ${{ steps.calculate_duration.outputs.elapsed }} sec)
           # Allow unsigned/invalid certificates
           ignore_cert: true
