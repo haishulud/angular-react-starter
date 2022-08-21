@@ -116,9 +116,12 @@ jobs:
       - name: get job result
         id: job_conclusion
         run: |
-          echo "::set-output name=job_${{ matrix.job-index }}_conclusion::$(curl -H "Accept: application/vnd.github+json" \
-          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
-          | jq '.jobs[${{ matrix.job-index }}].conclusion')"
+          for i in 0 1
+          do
+            echo "::set-output name=job_$i_conclusion::$(curl -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
+            | jq '.jobs[$i].conclusion')"
+          done
 
       - id: calculate_duration
         run: |
