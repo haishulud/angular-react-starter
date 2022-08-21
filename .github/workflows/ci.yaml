@@ -25,10 +25,7 @@ jobs:
     steps:
       - name: start time
         id: start
-        run: |
-          #printf -v now '%(%s)T\n'
-          #echo "::set-output name=start_time::$(%(%s)T\n)"
-          printf "::set-output name=start_time::$(%(%s)T\n)"
+        run: printf "::set-output name=start_time::$(%(%s)T\n)"
 
       - uses: actions/checkout@v3
       
@@ -155,7 +152,6 @@ jobs:
 
       - id: calculate_duration
         run: |
-          #echo "::set-output name=elapsed::$((now - ${{needs.test.outputs.start_time}}))"
           printf -v now '%(%s)T'
           ELPSD=$((now - ${{needs.test.outputs.start_time}}))
           echo "::set-output name=elapsed::$ELPSD"
