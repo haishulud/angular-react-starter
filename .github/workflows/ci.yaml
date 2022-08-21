@@ -82,7 +82,7 @@ jobs:
       - name: buld
         run: npm run build
 
-      #---Build Docker image, Login & Publish to Docker Packages---
+      #---Build Docker image, Login & Publish to remote registry---
       - name: login #log in to the container registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
 
@@ -99,45 +99,7 @@ jobs:
     if: ${{ always() }}
     needs: [build, test]
     steps:
-      - name:  Extract TEST and BUILD job starting & ending time #####
-        id: execution_timestamps
-        run: |
-          echo "::set-output name=starttime_test::$(curl -H "Accept: application/vnd.github+json" \
-          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
-          | jq '.jobs[0].started_at')"
-          echo "::set-output name=endtime_test::$(curl -H "Accept: application/vnd.github+json" \
-          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
-          | jq '.jobs[0].completed_at')"
-          echo "::set-output name=starttime_build::$(curl -H "Accept: application/vnd.github+json" \
-          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
-          | jq '.jobs[1].started_at')"
-          echo "::set-output name=endtime_build::$(curl -H "Accept: application/vnd.github+json" \
-          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
-          | jq '.jobs[1].completed_at')"
-
-      - id: calculate_time
-        run: |
-          started_at_test=${{steps.execution_timestamps.outputs.starttime_test}}
-          completed_at_test=${{steps.execution_timestamps.outputs.endtime_test}}
-          started_at_build=${{steps.execution_timestamps.outputs.starttime_build}}
-          completed_at_build=${{steps.execution_timestamps.outputs.endtime_build}}
-
-          START_TIME_TEST=$(date -d "$started_at_test" +%s)
-          END_TIME_TEST=$(date -d "$completed_at_test" +%s)
-          START_TIME_BUILD=$(date -d "$started_at_build" +%s)
-          END_TIME_BUILD=$(date -d "$completed_at_build" +%s)
-
-          ELAPSE_TEST=$(( $END_TIME_TEST - $START_TIME_TEST ))
-          ELAPSE_BUILD=$(( $END_TIME_BUILD - $START_TIME_BUILD ))
-          ELAPSE=$(( $ELAPSE_TEST + $ELAPSE_BUILD ))
-          echo $ELAPSE
-          echo "$(($ELAPSE/60/60))h $(($ELAPSE/60%60))m $(($ELAPSE%60))s"
-          echo "::set-output name=elpsd::$ELAPSE"
-          echo "::set-output name=el_hours::$(($ELAPSE/60/60))"
-          echo "::set-output name=el_minutes::$(($ELAPSE/60%60))"
-          echo "::set-output name=el_seconds::$(($ELAPSE%60))"
-      
-      - name: get email for Committer on PR or pusher on PUSH ######## #--pretty=format:%ae HEAD
+      - name: get email
         id: email
         run: |
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
@@ -146,7 +108,7 @@ jobs:
             echo "::set-output name=user_email::${{ github.event.pusher.email }}"
           fi
 
-      - name: Get job conclusion (success or failure) ########
+      - name: get job conclusion
         id: job_conclusion
         run: |
           echo "::set-output name=test_conclusion::$(curl -H "Accept: application/vnd.github+json" \
@@ -184,6 +146,10 @@ jobs:
           # Whether this connection use TLS (default is true if server_port is 465)
           secure: true
           # Body of mail message (might be a filename prefixed with file:// to read from)
-          body: Build job for ${{ github.repository }} has completed. Result status for TESTS-${{ steps.job_conclusion.outputs.test_conclusion }}, for BUILD JOB-${{ steps.job_conclusion.outputs.build_conclusion }} . Time ${{ steps.calculate_time.outputs.el_hours }}h ${{ steps.calculate_time.outputs.el_minutes }}m ${{ steps.calculate_time.outputs.el_seconds }}s (${{ steps.calculate_time.outputs.elpsd }} sec) (new time ${{ steps.calculate_duration.outputs.elapsed }} sec)
+          body: |
+            Build job for ${{ github.repository }} has completed. \
+            Result status for TESTS-${{ steps.job_conclusion.outputs.test_conclusion }}, \
+            for BUILD JOB-${{ steps.job_conclusion.outputs.build_conclusion }}. \
+            Workflow execution time ${{ steps.calculate_duration.outputs.elapsed }} sec.
           # Allow unsigned/invalid certificates
           ignore_cert: true
