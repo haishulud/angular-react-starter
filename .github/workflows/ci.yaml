@@ -79,7 +79,7 @@ jobs:
       - name: install
         run: npm ci
 
-      - name: buld
+      - name: build
         run: npm run build
 
       #---Build Docker image, Login & Publish to remote registry---
@@ -116,10 +116,11 @@ jobs:
           do
           jobi=job_${i}_conclusion
           temp=$i
-          echo "::set-output name=${jobi}::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq --arg i "$temp" '.jobs[$i].conclusion')"
+          echo "::set-output name=${jobi}::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq --arg ii "$temp" '.jobs[$ii].conclusion')"
           done
 
-      - id: calculate_duration
+      - name: calculate duration
+        id: calculate_duration
         run: |
           printf -v now '%(%s)T'
           ELPSD=$(($now - ${{needs.test.outputs.start_time}}))
