@@ -114,11 +114,11 @@ jobs:
         run: |
           for i in {0..1}
           do
-          combined=job_${i}_conclusion
-          echo $combined
-          echo ${combined}
-          echo ${!combined}
-          echo "::set-output name=${combined}::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].conclusion')"
+          jobi=job_${i}_conclusion
+          echo "1--$jobi"
+          echo "2--${jobi}""
+          echo "3--${!jobi}""
+          echo "::set-output name=${jobi}::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[$i].conclusion')"
           done
 
       - id: calculate_duration
