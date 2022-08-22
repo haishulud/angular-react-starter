@@ -4,142 +4,159 @@ on:
   #workflow_dispatch: #manual start from Github UI or API
   push:
     branches: master
-  #pull_request:
-    #branches: master
+  pull_request:
+    branches: master
 
 jobs:
-  main_job:
-    runs-on: ubuntu-latest
-    permissions:      
-      contents: read  #permissions for publishing Docker images to Github Packages
-      packages: write #permissions for publishing Docker images to Github Packages
-          
+  test:
+    timeout-minutes: 30
+    runs-on: ubuntu-20.04
     defaults:
       run:
-        working-directory: angular 
+        working-directory: angular
+
+    outputs:
+      start_time: ${{ steps.start.outputs.start_time}}
 
     strategy:
       matrix:
         node-version: [16.x]
-       #node-version: [16.x, 14.x] #used this line instead of the one above to emulate errors in the test phase AND to test matrix syntax
+
     steps:
       - uses: actions/checkout@v3
+
+      - name: start time
+        id: start
+        run: |
+          printf -v now '%(%s)T'
+          echo "::set-output name=start_time::$now"
       
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: use node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
       
-      - name: Install dependencies
-        #run: npm install
-        run: npm ci  		#"ci" is (theoretically?) faster than "install"
-      
-      - name: Buld phase
-        run: npm run build
-      
-      - name: print working dir
-        run: |
-          echo $PWD
-      - run: "ls $PWD"
-      - run: "ls /home/runner/work/angular-react-starter/angular-react-starter/angular/dist/angular-starter"
-      - run: "ls ${{ github.workspace }}"
-      - run: "echo $HOME"
+      - name: install
+        run: npm ci
 
-      - name: Test phase
-        id: test_phase
+      - name: lint
+        run: npm run lint
+     
+      - name: run
+        id: run_test
         run: npm run test -- --watch=false --browsers=ChromeHeadless
 
-      - name: Check if tests were successful and exit on failure
-        if: ${{ failure() && steps.test_phase.conclusion == 'failure' }}
+      - name: check #Check if tests were successful and exit on failure
+        if: ${{ failure() && steps.run_test.conclusion == 'failure' }}
         run: exit 1
 
-      - name: Linting
-        run: npm run lint #not in the task, but still running it... just because I can
-      
-      #---Build Docker image, Login & Publish to Docker Packages---
-      - name: Log in to the Container registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
-        with:
-          images: ghcr.io/${{ github.repository }}
-            
-      - name: Build and push Docker image
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-        with:
-          context: ./angular
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-      
-      #- name: Job's running time !!!!!this approach DOESN'T WORK!!!! because .run_duration_ms parameter is awailable only after this workflow completion and accessible only from other actions, which isn't possible according to this test task conditions (I can't create additional yaml files)
-      #  id: execution_time
-      #  run: |
-      #    curl \
-      #      -H "Accept: application/vnd.github+json" \ 
-      #      -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-      #      https://api.github.com/repos/${{ github.actor }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/timing
+    
+  build:
+    timeout-minutes: 30
+    runs-on: ubuntu-20.04
+    needs: test
 
-      
-  stats_job:
-    runs-on: ubuntu-latest
-    needs: main_job
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+
+    permissions:      
+      contents: read  #permissions for publishing Docker images to Github Packages
+      packages: write #permissions for publishing Docker images to Github Packages
+    
+    defaults:
+      run:
+        working-directory: angular
+    
     steps:
-      - name:  Extract job starting & ending time
-        id: execution_timestamps
-        run: |
-          echo "::set-output name=starttime::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].started_at')" && echo "::set-output name=endtime::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].completed_at')"
+      - uses: actions/checkout@v3
       
-      - name: calculate time
-        id: calculate_time
+      - name: use node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      
+      - name: install
+        run: npm ci
+
+      - name: build
+        run: npm run build
+
+      #---Build Docker image, Login & Publish to remote registry---
+      - name: login #log in to the container registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
+
+      - name: build image
+        run: docker build -t $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7} -t $REGISTRY/$IMAGE_NAME:latest .
+
+      - name: push image
+        run: docker push $REGISTRY/$IMAGE_NAME:${GITHUB_SHA::7} && docker push $REGISTRY/$IMAGE_NAME:latest
+
+  
+  stats:
+    timeout-minutes: 30
+    runs-on: ubuntu-20.04
+    if: ${{ always() }}
+    needs: [build, test]
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: get email
+        id: email
         run: |
-          started_at=${{steps.execution_timestamps.outputs.starttime}}
-          completed_at=${{steps.execution_timestamps.outputs.endtime}}
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            echo "::set-output name=user_email::$(git log -1 --pretty=format:%ae)" 
+          else
+            echo "::set-output name=user_email::${{ github.event.pusher.email }}"
+          fi
 
-          START_TIME=$(date -d "$started_at" +%s)
-          END_TIME=$(date -d "$completed_at" +%s)
-
-          ELAPSE=$(( $END_TIME - $START_TIME ))
-          echo $ELAPSE
-          echo "$(($ELAPSE/60/60))h $(($ELAPSE/60%60))m $(($ELAPSE%60))s"
-          echo "::set-output name=elpsd::$ELAPSE"
-          echo "::set-output name=el_hours::$(($ELAPSE/60/60))"
-          echo "::set-output name=el_minutes::$(($ELAPSE/60%60))"
-          echo "::set-output name=el_seconds::$(($ELAPSE%60))"
-
-      - name: Get job conclusion (success or failure)
+      - name: get job result
         id: job_conclusion
         run: |
-          echo "::set-output name=main_job_conclusion::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq '.jobs[0].conclusion')"
+          for i in {0..1}
+          do
+          jobi=job_${i}_conclusion
+          echo "::set-output name=${jobi}::$(curl -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
+          | jq --argjson i "$i" '.jobs[$i].conclusion')"
+          done
 
-      #---Email notifications v2 with elapsed time---
-      - name: Send email notifications for this job v2
-        if: ${{ always() }} #run this step even if previous steps failed
+      - name: calculate duration
+        id: calculate_duration
+        run: |
+          printf -v now '%(%s)T'
+          ELPSD=$(($now - ${{needs.test.outputs.start_time}}))
+          echo "::set-output name=elapsed::$ELPSD"
+
+      #---Email notifications with elapsed time---
+      - name: send email
+        if: ${{ always() }} #run this step even if previous steps have failed
         uses: dawidd6/action-send-mail@6d23605227c578d570e5594931720f85a1af55a2
         with:
           # SMTP server address
-          server_address: ${{secrets.MAIL_SERVER}}
+          server_address: ${{ secrets.MAIL_SERVER }}
           # SMTP server port
-          server_port: 465 #587
+          server_port: 465
           # Authenticate as this user to SMTP server
-          username: ${{secrets.MAIL_USERNAME}}
+          username: ${{ secrets.MAIL_USERNAME }}
           # Authenticate with this password to SMTP server
-          password: ${{secrets.MAIL_PASSWORD}}
+          password: ${{ secrets.MAIL_PASSWORD }}
           # Subject of mail message
           subject: Github Actions job result
           # Recipients mail addresses (separated with comma)
-          to: ${{github.event.pusher.email}}
+          to: ${{ steps.email.outputs.user_email }} #${{ github.event.pusher.email }}
           # Full name of mail sender (might be with an email address specified in <>)
-          from: Github CI v2
+          from: Github CI
           # Whether this connection use TLS (default is true if server_port is 465)
           secure: true
           # Body of mail message (might be a filename prefixed with file:// to read from)
-          body: Build job for ${{github.repository}} has completed. Result status ${{steps.job_conclusion.outputs.main_job_conclusion}}. Time ${{steps.calculate_time.outputs.el_hours}}h ${{steps.calculate_time.outputs.el_minutes}}m ${{steps.calculate_time.outputs.el_seconds}}s (${{steps.calculate_time.outputs.elpsd}} sec)
+          body: |
+            Build job for ${{ github.repository }} has completed.
+            Result status for TESTS-${{ steps.job_conclusion.outputs.job_0_conclusion }},
+            for BUILD JOB-${{ steps.job_conclusion.outputs.job_1_conclusion }}.
+            Workflow execution time ${{ steps.calculate_duration.outputs.elapsed }} sec.
           # Allow unsigned/invalid certificates
           ignore_cert: true
