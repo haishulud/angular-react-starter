@@ -115,8 +115,9 @@ jobs:
           for i in {0..1}
           do
           jobi=job_${i}_conclusion
-          temp=$i
-          echo "::set-output name=${jobi}::$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs | jq --argjson ii "$temp" '.jobs[$ii].conclusion')"
+          echo "::set-output name=${jobi}::$(curl -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
+          | jq --argjson i "$i" '.jobs[$i].conclusion')"
           done
 
       - name: calculate duration
